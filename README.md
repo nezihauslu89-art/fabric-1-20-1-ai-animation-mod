@@ -1,39 +1,34 @@
 # Fabric AI Animation
 
-This repo is a starter Fabric 1.20.1 mod scaffold for recording nearby player animations and exporting a Mine-imator-friendly JSON structure.
+Fabric 1.20.1 client mod that records nearby players and creates an MP4 screen capture.
 
-What is included:
-- Fabric 1.20.1 project files
-- Client-side recorder for nearby players
-- Simple action classification (idle, walk, run, jump, turn)
-- Export to JSON with frame-by-frame movement data
-- Keybind to start/stop recording
+## What it does
 
-Important note:
-- This is a solid foundation, not a magical black-box AI-to-Mine-Imator generator.
-- The current AI part is a deterministic motion classifier. If you later want a real LLM-based action naming layer, you can attach an external API or a local model.
-- A true .miproject file is a specific JSON/ZIP format used by Mine-imator. This scaffold builds the format structure you can adapt for export.
+- Press **R** to start/stop recording.
+- Captures the Minecraft window framebuffer at 20 FPS.
+- Tracks players within 64 blocks and writes motion/action data to JSON.
+- On stop, invokes **FFmpeg** to turn the PNG frames into an `.mp4`.
+- The MP4 is a video of what your Minecraft client sees. It is not a separate Mine-imator 3D render.
 
-Quick start:
-1. Install JDK 17
-2. Install Gradle 8.7+ or use the Gradle wrapper after bootstrapping it locally
-3. Run:
-   gradle clean build
-4. The built jar will appear under build/libs/
+## Install requirements
 
-In-game controls:
-- Press the configured keybind to start/stop recording
-- The export is written to:
-  %APPDATA%/.minecraft/config/fabric-ai-animation/
+1. Java 17
+2. Fabric Loader/API for Minecraft 1.20.1
+3. FFmpeg installed and available as `ffmpeg` in the system PATH
+4. Build with `gradle clean build` (or the included Gradle wrapper when present)
 
-Files added so far:
-- Fabric mod bootstrap
-- Client animation recorder
-- Simple export logic
-- README with setup instructions
+## Output
 
-Next steps you can do in the same repo:
-- Add a real Mine-imator .miproject exporter
-- Add AI prompt-based action labeling
-- Add more animation classes (sneak, attack, damage, crouch, use item)
-- Add GUI or config screen
+Files are written under:
+
+`%APPDATA%/.minecraft/config/fabric-ai-animation/captures/`
+
+The motion data JSON is written under:
+
+`%APPDATA%/.minecraft/config/fabric-ai-animation/`
+
+If FFmpeg is not installed, the mod still saves the motion JSON and keeps a PNG frame folder; it reports that the MP4 could not be created.
+
+## Important limitation
+
+A client-side Fabric mod can reliably make a screen/video capture. Producing a freely movable camera animation or a full 3D render of every player would require a replay/renderer pipeline rather than a simple MP4 encoder. This version records the current Minecraft viewpoint, while also tracking nearby-player motion for later animation processing.
