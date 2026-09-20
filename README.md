@@ -1,34 +1,38 @@
-# Fabric AI Animation
+# Fabric AI Animation Replay Camera
 
-Fabric 1.20.1 client mod that records nearby players and creates an MP4 screen capture.
+This repo is now focused on a real replay-style motion capture system for Fabric 1.20.1.
 
-## What it does
+What is included:
+- Camera position + rotation capture
+- Nearby player tracking within a radius
+- Motion/action classifier (`idle`, `walk`, `run`, `jump`, `crouch`, `attack`, `turn`)
+- JSON export of replay data in a render-friendly structure
+- Optional MP4 generation using FFmpeg from captured screenshots
 
-- Press **R** to start/stop recording.
-- Captures the Minecraft window framebuffer at 20 FPS.
-- Tracks players within 64 blocks and writes motion/action data to JSON.
-- On stop, invokes **FFmpeg** to turn the PNG frames into an `.mp4`.
-- The MP4 is a video of what your Minecraft client sees. It is not a separate Mine-imator 3D render.
+Important technical note:
+A single Fabric client mod cannot create a true 3D skeletal bone renderer or a full shader-based cinematic engine by itself. A full “bone + shader + replay render” pipeline requires:
+- offline render passes,
+- custom animation/model export,
+- shader stages,
+- a dedicated renderer or compositing pipeline.
 
-## Install requirements
+This version gives you the correct foundation for that system: it records camera motion, nearby actor motion, and high-value animation metadata in a clean JSON replay format. That is the correct base for a later offline renderer or external animation engine.
 
-1. Java 17
-2. Fabric Loader/API for Minecraft 1.20.1
-3. FFmpeg installed and available as `ffmpeg` in the system PATH
-4. Build with `gradle clean build` (or the included Gradle wrapper when present)
+Requirements:
+1. JDK 17
+2. Fabric Loader + Fabric API 1.20.1
+3. FFmpeg installed and on PATH if you want MP4 output
+4. Gradle build tools
 
-## Output
+Run:
+- gradle clean build
 
-Files are written under:
+Output:
+- built jar goes to `build/libs/`
+- replay JSON is stored under `%APPDATA%/.minecraft/config/fabric-ai-animation/`
+- captured screenshots and video output are under `%APPDATA%/.minecraft/config/fabric-ai-animation/captures/`
 
-`%APPDATA%/.minecraft/config/fabric-ai-animation/captures/`
+In-game controls:
+- Press `R` to start/stop recording.
 
-The motion data JSON is written under:
-
-`%APPDATA%/.minecraft/config/fabric-ai-animation/`
-
-If FFmpeg is not installed, the mod still saves the motion JSON and keeps a PNG frame folder; it reports that the MP4 could not be created.
-
-## Important limitation
-
-A client-side Fabric mod can reliably make a screen/video capture. Producing a freely movable camera animation or a full 3D render of every player would require a replay/renderer pipeline rather than a simple MP4 encoder. This version records the current Minecraft viewpoint, while also tracking nearby-player motion for later animation processing.
+This repo is intentionally the replay foundation, not a fake “magic AI animation creator.” The AI layer here is a real motion classifier, while the camera + actor motion export is the data required for a later bone/renderer pipeline.

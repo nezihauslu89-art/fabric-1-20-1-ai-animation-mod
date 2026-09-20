@@ -10,15 +10,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public final class AnimationRecorder {
     private static final double CAPTURE_RADIUS = 64.0D;
     private static boolean enabled = false;
-    private static final List<FrameSnapshot> frames = new ArrayList<>();
-    private static int tickCounter = 0;
+    private static final List<ReplayFrame> frames = new ArrayList<>();
     private static Path captureDirectory;
+    private static int tickCounter = 0;
 
     private AnimationRecorder() {
     }
@@ -38,29 +37,59 @@ public final class AnimationRecorder {
         }
 
         tickCounter++;
+        Vec3d cameraPos = client.gameRenderer.getCamera().getPos();
+        double yaw = client.cameraEntity == null ? 0.0D : client.cameraEntity.getYaw();
+        double pitch = client.cameraEntity == null ? 0.0D : client.cameraEntity.getPitch();
+
         List<PlayerSnapshot> players = new ArrayList<>();
         double radiusSquared = CAPTURE_RADIUS * CAPTURE_RADIUS;
 
         for (PlayerEntity player : client.world.getPlayers()) {
+            if (player == client.player) {
+                continue;
+            }
             if (player.squaredDistanceTo(client.player) > radiusSquared) {
                 continue;
             }
 
             Vec3d pos = player.getPos();
             players.add(new PlayerSnapshot(
-                    player.getName().getString(), pos.x, pos.y, pos.z,
-                    player.getYaw(), player.getPitch(), player.isSwimming(),
-                    player.isSprinting(), player.isSneaking(), player.isOnGround(),
-                    player.getVelocity().length()
+                    player.getName().getString(),
+                    pos.x,
+                    pos.y,
+                    pos.z,
+                    player.getYaw(),
+                    player.getPitch(),
+                    player.isSwimming(),
+                    player.isSprinting(),
+                    player.isSneaking(),
+                    player.isOnGround(),
+                    player.getVelocity().length(),
+                    player.handSwingProgress
             ));
         }
 
-        frames.add(new FrameSnapshot(tickCounter, players));
-        captureScreenFrame(client, tickCounter - 1);
+        ReplayFrame frame = new ReplayFrame(
+                tickCounter,
+                cameraPos.x,
+                cameraPos.y,
+                cameraPos.z,
+                yaw,
+                pitch,
+                players
+        );
+        frames.add(frame);
+
+        if (captureDirectory != null) {
+            captureScreenFrame(client, tickCounter - 1);
+        }
     }
 
     private static void captureScreenFrame(MinecraftClient client, int frameNumber) {
-        if (captureDirectory == null) return;
+        if (captureDirectory == null) {
+            return;
+        }
+
         ScreenshotRecorder.saveScreenshot(
                 captureDirectory.toFile(),
                 String.format("frame_%06d", frameNumber),
@@ -84,8 +113,8 @@ public final class AnimationRecorder {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player != null) {
             String note = captureDirectory == null
-                    ? "Recording started, but video frames could not be created"
-                    : "Recording started (R to stop)";
+                    ? "Recording started; video frames unavailable"
+                    : "Recording started. Press R to stop.";
             client.player.sendMessage(Text.of("[FabricAIAnimation] " + note), false);
         }
     }
@@ -98,17 +127,41 @@ public final class AnimationRecorder {
                 VideoExporter.encodeMp4(captureDirectory, client.runDirectory.toPath());
 
         if (client.player != null) {
+            client.player.sendMessage(Text.of("[FabricAIAnimation] Motion data written: " + jsonPath), false);
             client.player.sendMessage(Text.of("[FabricAIAnimation] MP4: " + videoPath), false);
-            client.player.sendMessage(Text.of("[FabricAIAnimation] Motion data: " + jsonPath), false);
         }
+
         captureDirectory = null;
+        frames.clear();
     }
 
-    public record PlayerSnapshot(String name, double x, double y, double z, float yaw,
-                                 float pitch, boolean swimming, boolean sprinting,
-                                 boolean sneaking, boolean grounded, double speed) {
-        public String action() { return ActionClassifier.classify(this); }
+    public record PlayerSnapshot(
+            String name,
+            double x,
+            double y,
+            double z,
+            float yaw,
+            float pitch,
+            boolean swimming,
+            boolean sprinting,
+            boolean sneaking,
+            boolean grounded,
+            double speed,
+            float swingProgress
+    ) {
+        public String action() {
+            return ActionClassifier.classify(this);
+        }
     }
 
-    public record FrameSnapshot(int tick, List<PlayerSnapshot> players) { }
+    public record ReplayFrame(
+            int tick,
+            double cameraX,
+            double cameraY,
+            double cameraZ,
+            double cameraYaw,
+            double cameraPitch,
+            List<PlayerSnapshot> players
+    ) {
+    }
 }

@@ -14,13 +14,16 @@ public final class ActionClassifier {
         if (snapshot.sprinting()) {
             return "run";
         }
-        if (snapshot.speed() > 0.18) {
-            return "walk";
-        }
         if (!snapshot.grounded()) {
             return "jump";
         }
-        if (Math.abs(snapshot.yaw()) > 2.0f) {
+        if (snapshot.speed() > 0.22D) {
+            return "walk";
+        }
+        if (snapshot.swingProgress() > 0.05F) {
+            return "attack";
+        }
+        if (Math.abs(snapshot.yaw()) > 2.0F) {
             return "turn";
         }
         return "idle";

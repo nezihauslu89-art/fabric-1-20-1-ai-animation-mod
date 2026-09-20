@@ -14,16 +14,34 @@ public final class AnimationExporter {
     private AnimationExporter() {
     }
 
-    public static String buildJson(List<AnimationRecorder.FrameSnapshot> frames) {
+    public static String buildJson(List<AnimationRecorder.ReplayFrame> frames) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\n");
-        sb.append("  \"format\": \"mineimator-scaffold\",\n");
+        sb.append("  \"format\": \"fabric-motion-replay-v1\",\n");
         sb.append("  \"mod\": \"fabric-ai-animation\",\n");
         sb.append("  \"frameCount\": ").append(frames.size()).append(",\n");
-        sb.append("  \"frames\": [\n");
+        sb.append("  \"camera\": [\n");
 
         for (int i = 0; i < frames.size(); i++) {
-            AnimationRecorder.FrameSnapshot frame = frames.get(i);
+            AnimationRecorder.ReplayFrame frame = frames.get(i);
+            sb.append("    {\n");
+            sb.append("      \"tick\": ").append(frame.tick()).append(",\n");
+            sb.append("      \"position\": [").append(formatDouble(frame.cameraX())).append(", ")
+                    .append(formatDouble(frame.cameraY())).append(", ")
+                    .append(formatDouble(frame.cameraZ())).append("],\n");
+            sb.append("      \"rotation\": [").append(formatDouble(frame.cameraYaw())).append(", ")
+                    .append(formatDouble(frame.cameraPitch())).append("]\n");
+            sb.append("    }");
+            if (i < frames.size() - 1) {
+                sb.append(",");
+            }
+            sb.append("\n");
+        }
+        sb.append("  ],\n");
+
+        sb.append("  \"actors\": [\n");
+        for (int i = 0; i < frames.size(); i++) {
+            AnimationRecorder.ReplayFrame frame = frames.get(i);
             sb.append("    {\n");
             sb.append("      \"tick\": ").append(frame.tick()).append(",\n");
             sb.append("      \"players\": [");
@@ -33,17 +51,25 @@ public final class AnimationExporter {
                 AnimationRecorder.PlayerSnapshot player = players.get(j);
                 sb.append("{\n");
                 sb.append("        \"name\": \"").append(escape(player.name())).append("\",\n");
-                sb.append("        \"x\": ").append(formatDouble(player.x())).append(",\n");
-                sb.append("        \"y\": ").append(formatDouble(player.y())).append(",\n");
-                sb.append("        \"z\": ").append(formatDouble(player.z())).append(",\n");
-                sb.append("        \"yaw\": ").append(formatDouble(player.yaw())).append(",\n");
-                sb.append("        \"pitch\": ").append(formatDouble(player.pitch())).append(",\n");
-                sb.append("        \"action\": \"").append(player.action()).append("\"\n");
+                sb.append("        \"position\": [").append(formatDouble(player.x())).append(", ")
+                        .append(formatDouble(player.y())).append(", ")
+                        .append(formatDouble(player.z())).append("],\n");
+                sb.append("        \"rotation\": [").append(formatDouble(player.yaw())).append(", ")
+                        .append(formatDouble(player.pitch())).append("],\n");
+                sb.append("        \"action\": \"").append(player.action()).append("\",\n");
+                sb.append("        \"state\": {\n");
+                sb.append("          \"sprinting\": ").append(player.sprinting()).append(",\n");
+                sb.append("          \"sneaking\": ").append(player.sneaking()).append(",\n");
+                sb.append("          \"swimming\": ").append(player.swimming()).append(",\n");
+                sb.append("          \"grounded\": ").append(player.grounded()).append(",\n");
+                sb.append("          \"speed\": ").append(formatDouble(player.speed())).append("\n");
+                sb.append("        }\n");
                 sb.append("      }");
                 if (j < players.size() - 1) {
                     sb.append(",");
                 }
             }
+
             sb.append("]\n");
             sb.append("    }");
             if (i < frames.size() - 1) {
@@ -51,7 +77,6 @@ public final class AnimationExporter {
             }
             sb.append("\n");
         }
-
         sb.append("  ]\n");
         sb.append("}\n");
         return sb.toString();
@@ -63,12 +88,12 @@ public final class AnimationExporter {
             Files.createDirectories(dir);
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
-            String fileName = "capture_" + LocalDateTime.now().format(formatter) + ".miproject.json";
+            String fileName = "replay_" + LocalDateTime.now().format(formatter) + ".json";
             Path out = dir.resolve(fileName);
             Files.writeString(out, json, StandardCharsets.UTF_8);
             return out.toString();
         } catch (IOException e) {
-            throw new RuntimeException("Failed to write export", e);
+            throw new RuntimeException("Failed to write replay export", e);
         }
     }
 
@@ -77,8 +102,6 @@ public final class AnimationExporter {
     }
 
     private static String escape(String value) {
-        return value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"");
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }
